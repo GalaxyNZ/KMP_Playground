@@ -15,6 +15,8 @@ import kotlin.time.ExperimentalTime
 @OptIn(ExperimentalTime::class)
 class ScoringViewModel: ViewModel() {
 
+    private val periods = 3
+    private val currentPeriod = MutableStateFlow(1)
     private val periodDuration = 20.minutes.inWholeMilliseconds
 
     // Timer state management
@@ -168,11 +170,13 @@ class ScoringViewModel: ViewModel() {
         homeData,
         awayData,
         remainingTime,
-    ) { team1, team2, timer ->
+        currentPeriod,
+    ) { team1, team2, timer, period ->
         ScoringScreenModel(
             team1,
             team2,
-            timer
+            timer,
+            period
         )
     }
 

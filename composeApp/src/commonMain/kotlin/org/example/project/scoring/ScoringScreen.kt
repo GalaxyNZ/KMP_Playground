@@ -4,7 +4,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -28,9 +28,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.example.project.scoring.ScoringViewModel.Team
+import org.example.project.ui.squareSize
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 import kotlin.math.pow
@@ -44,7 +46,8 @@ fun ScoringScreen(
         initial = ScoringScreenModel(
             TeamScoringData("", 0, 0, 0, 0f),
             TeamScoringData("", 0, 0, 0, 0f),
-            0
+            0,
+            2
         )
     )
 
@@ -52,7 +55,7 @@ fun ScoringScreen(
 
     ScoringScreenContent(
         screenModel,
-        startTimer = viewModel::timerPressed,
+        timerPressed = viewModel::timerPressed,
         addGoal = viewModel::addGoal,
         addShot = viewModel::addShot,
         addPenalty = viewModel::addPenalty,
@@ -62,19 +65,22 @@ fun ScoringScreen(
 @Composable
 internal fun ScoringScreenContent(
     model: ScoringScreenModel,
-    startTimer: () -> Unit,
+    timerPressed: () -> Unit,
     addGoal: (Team) -> Unit,
     addShot: (Team) -> Unit,
     addPenalty: (Team) -> Unit,
 ) {
-    Column(Modifier.background(Color.LightGray).fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
-
+    Column(Modifier.background(Color.White).fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
                 text = formatTimer(model.timer), fontSize = 48.sp,
                 modifier = Modifier.clickable {
-                    startTimer()
+                    timerPressed()
                 }
+            )
+
+            Text(
+                text = "Period ${model.period}", fontSize = 24.sp,
             )
         }
         Row(Modifier.weight(1f)) {
@@ -116,18 +122,14 @@ fun TeamScoringSection(
             text = name, fontSize = 18.sp
         )
 
-        Text(
-            text = score.toString(), fontSize = 32.sp
-        )
-
-        Button(
-            onClick = { addGoal(team) },
+        Score(
+            text = score.toString()
         ) {
-            Text(text = "Increment Score ${team.name}")
+            addGoal(team)
         }
 
         Text(
-            text = "Shots: $shots", fontSize = 16.sp
+            text = "$shots shots", fontSize = 16.sp
         )
 
         Button(
@@ -164,10 +166,10 @@ fun TeamScoringSection(
                         .animateContentSize()
                 ) {
                     Text(
-                        text = "Penalty ${i.playerName}", fontSize = 16.sp
+                        text = "Penalty ${i.playerName}", fontSize = 12.sp
                     )
                     Text(
-                        text = "at ${formatTimeToMinute(i.timeOfPenalty)}", fontSize = 16.sp
+                        text = "at ${formatTimeToMinute(i.timeOfPenalty)}", fontSize = 8.sp
                     )
                     Text(
                         text = "Time left: ${formatTimer(i.penaltyTimeRemaining)}", fontSize = 16.sp
@@ -176,6 +178,37 @@ fun TeamScoringSection(
             }
         }
     }
+}
+
+@Composable
+fun Score(
+    text: String,
+    onClick: (() -> Unit)? = null,
+) {
+    Box(
+        Modifier
+            .border(1.dp, Color.DarkGray, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.LightGray)
+            .clickable {
+                onClick?.invoke()
+            }
+            .padding(5.dp)
+            .squareSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = text,
+            fontSize = 120.sp,
+        )
+    }
+}
+
+@Composable
+fun Spacer(horizontal: Dp = 0.dp, vertical: Dp = 0.dp) {
+    androidx.compose.foundation.layout.Spacer(
+        Modifier.size(width = horizontal, height = vertical)
+    )
 }
 
 fun formatTimer(time: Long): String {
@@ -221,27 +254,30 @@ fun VerticalSeparator() {
 @Preview
 @Composable
 fun ScoringScreenPreview() {
-    ScoringScreenContent(
-        ScoringScreenModel(
-            TeamScoringData(
-                "Team A",
-                0,
-                0,
-                0,
-                0f
-            ),
-            TeamScoringData(
-                "Team B",
-                0,
-                0,
-                0,
-                0f
-            ),
-            0
-        ),
-        {},
-        {},
-        {},
-        {}
+    ScoringScreen(
+        ScoringViewModel()
     )
+    //    ScoringScreenContent(
+    //        ScoringScreenModel(
+    //            TeamScoringData(
+    //                "Team A",
+    //                0,
+    //                0,
+    //                0,
+    //                0f
+    //            ),
+    //            TeamScoringData(
+    //                "Team B",
+    //                0,
+    //                0,
+    //                0,
+    //                0f
+    //            ),
+    //            0
+    //        ),
+    //        {},
+    //        {},
+    //        {},
+    //        {}
+    //    )
 }
