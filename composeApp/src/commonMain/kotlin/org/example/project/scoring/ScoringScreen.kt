@@ -80,7 +80,7 @@ internal fun ScoringScreenContent(
         Row(Modifier.weight(1f)) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 TeamScoringSection(
-                    team = Team.A,
+                    team = Team.Home,
                     teamData = model.team1Data,
                     addGoal = addGoal,
                     addShot = addShot,
@@ -92,7 +92,7 @@ internal fun ScoringScreenContent(
 
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 TeamScoringSection(
-                    Team.B,
+                    Team.Away,
                     teamData = model.team2Data,
                     addGoal = addGoal,
                     addShot = addShot,

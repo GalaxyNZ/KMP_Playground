@@ -22,13 +22,10 @@ class ScoringViewModel: ViewModel() {
     private var startTimestamp: Long = 0L
     private var pausedRemainingTime: Long = periodDuration
 
-    // Changed: remainingTime is now the primary timer value
-    private val remainingTime = MutableStateFlow(periodDuration)
+    private val remainingTime = MutableStateFlow(periodDuration) // Count down
+    private val elapsedTime = MutableStateFlow(0L) // Count up
 
     private val timerState = MutableStateFlow(TimerState.STOPPED)
-
-    // Optional: Keep elapsedTime for backward compatibility if needed
-    private val elapsedTime = MutableStateFlow(0L)
 
     enum class TimerState {
         RUNNING,
@@ -105,13 +102,13 @@ class ScoringViewModel: ViewModel() {
         timerJob?.cancel()
     }
 
-    private val team1Name = MutableStateFlow("Team A")
-    private val team1Goals = MutableStateFlow(0)
-    private val team1Shots = MutableStateFlow(0)
-    private val team1Penalties = MutableStateFlow(emptyList<Penalty>())
+    private val homeName = MutableStateFlow("Team A")
+    private val homeGoals = MutableStateFlow(0)
+    private val homeShots = MutableStateFlow(0)
+    private val homePenalties = MutableStateFlow(emptyList<Penalty>())
 
     private val team1PenaltyState = combine(
-        team1Penalties,
+        homePenalties,
         elapsedTime
     ) { penalties, elapsedTime ->
         penalties.map { penalty ->
@@ -128,14 +125,14 @@ class ScoringViewModel: ViewModel() {
         }
     }
 
-    private val team2Name = MutableStateFlow("Team B")
-    private val team2Goals = MutableStateFlow(0)
-    private val team2Shots = MutableStateFlow(0)
+    private val awayName = MutableStateFlow("Team B")
+    private val awayGoals = MutableStateFlow(0)
+    private val awayShots = MutableStateFlow(0)
 
-    private val team1Data = combine(
-        team1Name,
-        team1Goals,
-        team1Shots,
+    private val homeData = combine(
+        homeName,
+        homeGoals,
+        homeShots,
         team1PenaltyState,
         //        team2Shots,
         //        team2Goals,
@@ -151,12 +148,12 @@ class ScoringViewModel: ViewModel() {
             penalties = penalties
         )
     }
-    private val team2Data = combine(
-        team2Name,
-        team2Goals,
-        team2Shots,
-        team1Shots,
-        team1Goals
+    private val awayData = combine(
+        awayName,
+        awayGoals,
+        awayShots,
+        homeShots,
+        homeGoals
     ) { name, score, shots, oppShots, oppGoals ->
         TeamScoringData(
             name = name,
@@ -168,8 +165,8 @@ class ScoringViewModel: ViewModel() {
     }
 
     val screenModel = combine(
-        team1Data,
-        team2Data,
+        homeData,
+        awayData,
         remainingTime,
     ) { team1, team2, timer ->
         ScoringScreenModel(
@@ -181,8 +178,8 @@ class ScoringViewModel: ViewModel() {
 
     fun addGoal(team: Team) {
         when (team) {
-            Team.A -> team1Goals.value += 1
-            Team.B -> team2Goals.value += 1
+            Team.Home -> homeGoals.value += 1
+            Team.Away -> awayGoals.value += 1
         }
 
         addShot(team)
@@ -190,13 +187,13 @@ class ScoringViewModel: ViewModel() {
 
     fun addShot(team: Team) {
         when (team) {
-            Team.A -> team1Shots.value += 1
-            Team.B -> team2Shots.value += 1
+            Team.Home -> homeShots.value += 1
+            Team.Away -> awayShots.value += 1
         }
     }
 
     fun addPenalty(team: Team) {
-        team1Penalties.value +=
+        homePenalties.value +=
             Penalty(
                 "Player ${Random.nextInt(0, 9)}",
                 elapsedTime.value,
@@ -206,8 +203,8 @@ class ScoringViewModel: ViewModel() {
     }
 
     enum class Team {
-        A,
-        B
+        Home,
+        Away
     }
 }
 
