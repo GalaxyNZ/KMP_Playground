@@ -15,40 +15,45 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.key.Key.Companion.P
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.example.project.scoring.ScoringViewModel.Team
 import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.koin.compose.koinInject
 
 @Composable
-fun ScoringScreen() {
+fun ScoringScreen(
+    viewModel: ScoringViewModel = koinInject(),
+) {
+    val screenModel by viewModel.screenModel.collectAsState(
+        initial = ScoringScreenModel(TeamScoringData("", 0), TeamScoringData("", 0))
+    )
+
     ScoringScreenContent(
-        ScoringScreenModel(
-        teamAName = "",
-        teamBName = "",
-        teamAScore = 0,
-        teamBScore = 0,
-        timeRemaining = "00:00:00"
-    ), updateScore1 = {}, updateScore2 = {})
+        screenModel,
+        updateScore = viewModel::updateScore,
+    )
 }
 
 @Composable
 internal fun ScoringScreenContent(
     model: ScoringScreenModel,
-    updateScore1: (Int) -> Unit,
-    updateScore2: (Int) -> Unit,
+    updateScore: (Team, Int) -> Unit,
 ) {
     Box(Modifier.background(Color.LightGray).fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
         Row(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 TeamScoringSection(
-                    teamName = model.teamAName,
-                    teamScore = model.teamAScore,
-                    updateScore = updateScore1
+                    team = Team.A,
+                    teamName = model.team1Data.teamName,
+                    teamScore = model.team1Data.score,
+                    updateScore = updateScore
                 )
             }
 
@@ -56,9 +61,10 @@ internal fun ScoringScreenContent(
 
             Box(Modifier.weight(1f).fillMaxHeight()) {
                 TeamScoringSection(
-                    teamName = model.teamBName,
-                    teamScore = model.teamBScore,
-                    updateScore = updateScore2
+                    Team.B,
+                    teamName = model.team2Data.teamName,
+                    teamScore = model.team2Data.score,
+                    updateScore = updateScore
                 )
             }
         }
@@ -67,9 +73,10 @@ internal fun ScoringScreenContent(
 
 @Composable
 fun TeamScoringSection(
+    team: Team,
     teamName: String,
     teamScore: Int,
-    updateScore: (Int) -> Unit,
+    updateScore: (Team, Int) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
@@ -81,13 +88,13 @@ fun TeamScoringSection(
         )
 
         Button(
-            onClick = { updateScore(teamScore + 1) },
+            onClick = { updateScore(team, teamScore + 1) },
             modifier = Modifier.pointerInput(Unit) {
                 detectTapGestures(
-                    onLongPress = { updateScore(teamScore - 1) }
+                    onLongPress = { updateScore(team, teamScore - 1) }
                 )
             }) {
-            Text(text = "Increment Score 2")
+            Text(text = "Increment Score ${team.name}")
         }
     }
 }
@@ -104,12 +111,14 @@ fun VerticalSeparator() {
 fun ScoringScreenPreview() {
     ScoringScreenContent(
         ScoringScreenModel(
-            "Team A",
-            "Team B",
-            0,
-            0,
-            "00:00:00"
+            TeamScoringData(
+                "Team A",
+                0
+            ),
+            TeamScoringData(
+                "Team B",
+                0
+            )
         ),
-        {},{}
-    )
+    ) { _, _ -> }
 }
