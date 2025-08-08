@@ -17,14 +17,14 @@ class ScoringViewModel: ViewModel() {
 
     private val periods = 3
     private val currentPeriod = MutableStateFlow(1)
-    private val periodDuration = 20.minutes.inWholeMilliseconds
+    private val periodDuration = 15.minutes.inWholeMilliseconds
 
     // Timer state management
     private var timerJob: Job? = null
     private var startTimestamp: Long = 0L
     private var pausedRemainingTime: Long = periodDuration
 
-    private val remainingTime = MutableStateFlow(periodDuration) // Count down
+    private val remainingTime = MutableStateFlow(periodDuration * periods) // Count down
     private val elapsedTime = MutableStateFlow(0L) // Count up
 
     private val timerState = MutableStateFlow(TimerState.STOPPED)
@@ -45,9 +45,10 @@ class ScoringViewModel: ViewModel() {
 
     private fun startTimer() {
         startTimestamp = Clock.System.now().toEpochMilliseconds()
-        pausedRemainingTime = periodDuration
-        remainingTime.value = periodDuration
+        pausedRemainingTime = periodDuration * periods
+        remainingTime.value = periodDuration * periods
         elapsedTime.value = 0L
+        currentPeriod.value = 1
         timerState.value = TimerState.RUNNING
         startTimerJob()
     }
@@ -62,7 +63,7 @@ class ScoringViewModel: ViewModel() {
 
     private fun resumeTimer() {
         // When resuming, adjust the start timestamp to account for paused time
-        val timeAlreadyElapsed = periodDuration - pausedRemainingTime
+        val timeAlreadyElapsed = periodDuration * periods - pausedRemainingTime
         startTimestamp = Clock.System.now().toEpochMilliseconds() - timeAlreadyElapsed
         timerState.value = TimerState.RUNNING
         startTimerJob()
@@ -72,9 +73,9 @@ class ScoringViewModel: ViewModel() {
         timerState.value = TimerState.STOPPED
         timerJob?.cancel()
         timerJob = null
-        remainingTime.value = periodDuration
+        remainingTime.value = periodDuration * periods
         elapsedTime.value = 0L
-        pausedRemainingTime = periodDuration
+        pausedRemainingTime = periodDuration * periods
     }
 
     private fun startTimerJob() {
@@ -85,12 +86,19 @@ class ScoringViewModel: ViewModel() {
                 val elapsed = currentTime - startTimestamp
                 elapsedTime.value = elapsed
 
-                val remaining = periodDuration - elapsed
+                val remaining = periodDuration * periods - elapsed
                 remainingTime.value = maxOf(0L, remaining)
 
                 // Stop timer when time is up
-                if (remaining <= 0) {
-                    stopTimer()
+                if (remaining - ((periods - currentPeriod.value) * periodDuration) <= 0) {
+                    pauseTimer()
+                    currentPeriod.value += 1
+                    if (currentPeriod.value > periods) {
+                        stopTimer()
+                        remainingTime.value = 0
+                        currentPeriod.value = periods
+                    }
+                    // TODO: game over check
                     break
                 }
 
@@ -109,7 +117,7 @@ class ScoringViewModel: ViewModel() {
     private val homeShots = MutableStateFlow(0)
     private val homePenalties = MutableStateFlow(emptyList<Penalty>())
 
-    private val team1PenaltyState = combine(
+    private val homePenaltyState = combine(
         homePenalties,
         elapsedTime
     ) { penalties, elapsedTime ->
@@ -130,39 +138,50 @@ class ScoringViewModel: ViewModel() {
     private val awayName = MutableStateFlow("Team B")
     private val awayGoals = MutableStateFlow(0)
     private val awayShots = MutableStateFlow(0)
+    private val awayPenalties = MutableStateFlow(emptyList<Penalty>())
+
+    private val awayPenaltyState = combine(
+        awayPenalties,
+        elapsedTime
+    ) { penalties, elapsedTime ->
+        penalties.map { penalty ->
+            if (penalty.penaltyServed) {
+                return@map penalty // Skip served penalties
+            }
+            val timeRemaining = (penalty.timeOfPenalty + (penalty.penaltyLengthSeconds * 1000)) - elapsedTime
+            Penalty(
+                playerName = penalty.playerName,
+                timeOfPenalty = penalty.timeOfPenalty,
+                penaltyTimeRemaining = timeRemaining,
+                penaltyServed = timeRemaining <= 0,
+            )
+        }
+    }
 
     private val homeData = combine(
         homeName,
         homeGoals,
         homeShots,
-        team1PenaltyState,
-        //        team2Shots,
-        //        team2Goals,
+        homePenaltyState,
     ) { name, score, shots, penalties -> //oppShots, oppGoals ->
         TeamScoringData(
             name = name,
             score = score,
             shots = shots,
-            saves = 0,
-            savePercentage = 1f, // Default to 1f until we have opponent data
-            //            saves = oppShots - oppGoals,
-            //            savePercentage = if (oppShots == 0) 1f else ((oppShots.toFloat() - oppGoals) / oppShots),
-            penalties = penalties
+            penalties = penalties,
         )
     }
     private val awayData = combine(
         awayName,
         awayGoals,
         awayShots,
-        homeShots,
-        homeGoals
-    ) { name, score, shots, oppShots, oppGoals ->
+        awayPenaltyState
+    ) { name, score, shots, penalties ->
         TeamScoringData(
             name = name,
             score = score,
             shots = shots,
-            saves = oppShots - oppGoals,
-            savePercentage = if (oppShots == 0 || oppGoals == 0) 1f else ((oppShots.toFloat() - oppGoals) / oppShots)
+            penalties = penalties,
         )
     }
 
@@ -175,7 +194,7 @@ class ScoringViewModel: ViewModel() {
         ScoringScreenModel(
             team1,
             team2,
-            timer,
+            timer - ((periods - period) * periodDuration),
             period
         )
     }
@@ -197,13 +216,14 @@ class ScoringViewModel: ViewModel() {
     }
 
     fun addPenalty(team: Team) {
-        homePenalties.value +=
-            Penalty(
-                "Player ${Random.nextInt(0, 9)}",
-                elapsedTime.value,
-                penaltyLengthSeconds = 10
-
-            )
+        val penalty = Penalty(
+            "Player ${Random.nextInt(0, 9)}",
+            elapsedTime.value,
+        )
+        when (team) {
+            Team.Home -> homePenalties.value += penalty
+            Team.Away -> awayPenalties.value += penalty
+        }
     }
 
     enum class Team {
@@ -216,8 +236,6 @@ data class TeamScoringData(
     val name: String,
     val score: Int,
     val shots: Int,
-    val saves: Int,
-    val savePercentage: Float,
     val penalties: List<Penalty> = emptyList(),
 )
 

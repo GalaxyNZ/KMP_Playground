@@ -44,10 +44,10 @@ fun ScoringScreen(
 ) {
     val screenModel by viewModel.screenModel.collectAsState(
         initial = ScoringScreenModel(
-            TeamScoringData("", 0, 0, 0, 0f),
-            TeamScoringData("", 0, 0, 0, 0f),
+            TeamScoringData("", 0, 0),
+            TeamScoringData("", 0, 0),
             0,
-            2
+            2,
         )
     )
 
@@ -137,14 +137,6 @@ fun TeamScoringSection(
         ) {
             Text(text = "Add Shot")
         }
-
-        Text(
-            text = "Saves: $saves", fontSize = 16.sp
-        )
-        Text(
-            text = "Save %: ${formatTwoDecimals(savePercentage)}", fontSize = 16.sp
-        )
-
 
         Button(
             onClick = { addPenalty(team) },
