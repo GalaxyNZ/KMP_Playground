@@ -19,11 +19,17 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,8 +41,6 @@ import org.example.project.scoring.ScoringViewModel.Team
 import org.example.project.ui.squareSize
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
-import kotlin.math.pow
-import kotlin.math.round
 
 @Composable
 fun ScoringScreen(
@@ -48,10 +52,9 @@ fun ScoringScreen(
             TeamScoringData("", 0, 0),
             0,
             2,
+            null
         )
     )
-
-
 
     ScoringScreenContent(
         screenModel,
@@ -59,6 +62,9 @@ fun ScoringScreen(
         addGoal = viewModel::addGoal,
         addShot = viewModel::addShot,
         addPenalty = viewModel::addPenalty,
+        updateName = viewModel::editTeamName,
+        showPrompt = viewModel::showEditNamePrompt,
+        dismissPrompt = viewModel::dismissPrompt
     )
 }
 
@@ -69,6 +75,9 @@ internal fun ScoringScreenContent(
     addGoal: (Team) -> Unit,
     addShot: (Team) -> Unit,
     addPenalty: (Team) -> Unit,
+    updateName: (Team, String) -> Unit,
+    showPrompt: (Team) -> Unit,
+    dismissPrompt: () -> Unit,
 ) {
     Column(Modifier.background(Color.White).fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -91,6 +100,7 @@ internal fun ScoringScreenContent(
                     addGoal = addGoal,
                     addShot = addShot,
                     addPenalty = addPenalty,
+                    editTeamName = showPrompt,
                 )
             }
 
@@ -103,8 +113,22 @@ internal fun ScoringScreenContent(
                     addGoal = addGoal,
                     addShot = addShot,
                     addPenalty = addPenalty,
+                    editTeamName = showPrompt
                 )
             }
+        }
+
+        model.editNamePromptDetails?.let { promptDetails ->
+            EditNamePrompt(
+                team = promptDetails.team,
+                teamName = promptDetails.teamName,
+                onNameChange = { team, newName ->
+                    updateName(team, newName)
+                },
+                onDismiss = {
+                    dismissPrompt()
+                }
+            )
         }
     }
 }
@@ -116,10 +140,13 @@ fun TeamScoringSection(
     addGoal: (Team) -> Unit,
     addShot: (Team) -> Unit,
     addPenalty: (Team) -> Unit,
+    editTeamName: (Team) -> Unit,
 ) = with(teamData) {
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            text = name, fontSize = 18.sp
+            text = name, fontSize = 18.sp, modifier = Modifier.clickable {
+                editTeamName(team)
+            }
         )
 
         Score(
@@ -196,6 +223,48 @@ fun Score(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun EditNamePrompt(
+    team: Team,
+    teamName: String,
+    onNameChange: (Team, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var newName by remember { mutableStateOf(teamName) }
+
+    BasicAlertDialog(
+        onDismissRequest = onDismiss,
+        Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.LightGray)
+            .padding(16.dp)
+    ) {
+        Column {
+            Text("Update ${team.name} Name", fontSize = 18.sp, modifier = Modifier.padding(16.dp))
+
+
+            TextField(
+                value = newName,
+                onValueChange = {
+                    newName = it
+                },
+                label = { Text("Team Name") },
+                modifier = Modifier.fillMaxWidth().padding(16.dp)
+            )
+
+            Button(
+                onClick = {
+                    onNameChange(team, newName)
+                    onDismiss()
+                }
+            ) {
+                Text("Update Name")
+            }
+        }
+    }
+}
+
 @Composable
 fun Spacer(horizontal: Dp = 0.dp, vertical: Dp = 0.dp) {
     androidx.compose.foundation.layout.Spacer(
@@ -229,11 +298,6 @@ fun Long.padWith0(length: Int = 2): String {
 
 fun String.padWith0(length: Int = 2): String {
     return this.padStart(length, '0')
-}
-
-fun formatTwoDecimals(value: Float): String {
-    val factor = 10.0.pow(2)
-    return (round(value * factor) / factor).toString()
 }
 
 @Composable

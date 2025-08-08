@@ -185,17 +185,21 @@ class ScoringViewModel: ViewModel() {
         )
     }
 
+    val editNamePrompt = MutableStateFlow<EditNamePromptDetails?>(null)
+
     val screenModel = combine(
         homeData,
         awayData,
         remainingTime,
         currentPeriod,
-    ) { team1, team2, timer, period ->
+        editNamePrompt
+    ) { team1, team2, timer, period, editNamePrompt ->
         ScoringScreenModel(
             team1,
             team2,
             timer - ((periods - period) * periodDuration),
-            period
+            period,
+            editNamePrompt
         )
     }
 
@@ -224,6 +228,21 @@ class ScoringViewModel: ViewModel() {
             Team.Home -> homePenalties.value += penalty
             Team.Away -> awayPenalties.value += penalty
         }
+    }
+
+    fun editTeamName(team: Team, newName: String) {
+        when (team) {
+            Team.Home -> homeName.value = newName
+            Team.Away -> awayName.value = newName
+        }
+    }
+
+    fun showEditNamePrompt(team: Team) {
+        editNamePrompt.value = EditNamePromptDetails(team, if (team == Team.Home) homeName.value else awayName.value)
+    }
+
+    fun dismissPrompt() {
+        editNamePrompt.value = null
     }
 
     enum class Team {
