@@ -12,33 +12,28 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.BasicAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.example.project.helpers.formatTimeToMinute
+import org.example.project.helpers.formatTimer
 import org.example.project.scoring.ScoringViewModel.Team
-import org.example.project.ui.squareSize
+import org.example.project.scoring.prompts.EditNamePrompt
+import org.example.project.ui.components.Score
+import org.example.project.ui.components.VerticalSeparator
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import org.koin.compose.koinInject
 
@@ -199,141 +194,10 @@ fun TeamScoringSection(
     }
 }
 
-@Composable
-fun Score(
-    text: String,
-    onClick: (() -> Unit)? = null,
-) {
-    Box(
-        Modifier
-            .border(1.dp, Color.DarkGray, RoundedCornerShape(12.dp))
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.LightGray)
-            .clickable {
-                onClick?.invoke()
-            }
-            .padding(5.dp)
-            .squareSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            fontSize = 120.sp,
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun EditNamePrompt(
-    team: Team,
-    teamName: String,
-    onNameChange: (Team, String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var newName by remember { mutableStateOf(teamName) }
-
-    BasicAlertDialog(
-        onDismissRequest = onDismiss,
-        Modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.LightGray)
-            .padding(16.dp)
-    ) {
-        Column {
-            Text("Update ${team.name} Name", fontSize = 18.sp, modifier = Modifier.padding(16.dp))
-
-
-            TextField(
-                value = newName,
-                onValueChange = {
-                    newName = it
-                },
-                label = { Text("Team Name") },
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
-            )
-
-            Button(
-                onClick = {
-                    onNameChange(team, newName)
-                    onDismiss()
-                }
-            ) {
-                Text("Update Name")
-            }
-        }
-    }
-}
-
-@Composable
-fun Spacer(horizontal: Dp = 0.dp, vertical: Dp = 0.dp) {
-    androidx.compose.foundation.layout.Spacer(
-        Modifier.size(width = horizontal, height = vertical)
-    )
-}
-
-fun formatTimer(time: Long): String {
-    val totalSeconds = time / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-
-    return if (minutes == 0L) {
-        "${seconds.padWith0()}:${((time % 1000)).padWith0().take(2)}"
-    } else {
-        "${minutes.padWith0()}:${seconds.padWith0()}"
-    }
-}
-
-fun formatTimeToMinute(time: Long): String {
-    val totalSeconds = time / 1000
-    val minutes = totalSeconds / 60
-    val seconds = totalSeconds % 60
-
-    return "${minutes.padWith0()}:${seconds.padWith0()}"
-}
-
-fun Long.padWith0(length: Int = 2): String {
-    return this.toString().padWith0(length)
-}
-
-fun String.padWith0(length: Int = 2): String {
-    return this.padStart(length, '0')
-}
-
-@Composable
-fun VerticalSeparator() {
-    Box(
-        Modifier.fillMaxHeight().width(0.5.dp).background(Color.DarkGray)
-    )
-}
-
 @Preview
 @Composable
 fun ScoringScreenPreview() {
     ScoringScreen(
         ScoringViewModel()
     )
-    //    ScoringScreenContent(
-    //        ScoringScreenModel(
-    //            TeamScoringData(
-    //                "Team A",
-    //                0,
-    //                0,
-    //                0,
-    //                0f
-    //            ),
-    //            TeamScoringData(
-    //                "Team B",
-    //                0,
-    //                0,
-    //                0,
-    //                0f
-    //            ),
-    //            0
-    //        ),
-    //        {},
-    //        {},
-    //        {},
-    //        {}
-    //    )
 }
